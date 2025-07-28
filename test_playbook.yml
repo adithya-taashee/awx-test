@@ -1,16 +1,25 @@
----
 - name: Execute script on Linux or Windows VM
-  hosts: all  # Will auto-detect OS type via group
+  hosts: all
   gather_facts: no
 
   tasks:
     # -- Windows Tasks --
     - name: Ping Windows host
-      win_ping:
+      ansible.windows.win_ping:
       when: "'oswindows' in group_names"
-      register: win_ping
 
-    - name: Display Windows ping result
-      debug:
-        msg: "{{ win_ping }}"
+    - name: Copy script to the Administrator's desktop
+      ansible.windows.win_copy:
+        src: windowspasswordexpiry.ps1  # Source file at the same level as the playbook
+        dest: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1 # Destination on the Windows server
+      when: "'oswindows' in group_names"
+
+    - name: Run the PowerShell script
+      ansible.windows.win_shell: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1
+      register: script_result
+      when: "'oswindows' in group_names"
+
+    - name: Display script output
+      ansible.builtin.debug:
+        msg: "{{ script_result.stdout_lines }}"
       when: "'oswindows' in group_names"
