@@ -10,12 +10,13 @@
 
     - name: Copy script to the Administrator's desktop
       ansible.windows.win_copy:
-        src: windowspasswordexpiry.ps1  # Source file at the same level as the playbook
-        dest: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1 # Destination on the Windows server
+        src: windowspasswordexpiry.ps1
+        dest: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1
       when: "'oswindows' in group_names"
 
     - name: Run the PowerShell script
-      ansible.windows.win_shell: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1
+      ansible.windows.win_shell:
+        command: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1
       register: script_result
       when: "'oswindows' in group_names"
 
