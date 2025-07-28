@@ -1,0 +1,51 @@
+---
+- name: Execute script on Linux or Windows VM
+  hosts: all  # Will auto-detect OS type via group
+  gather_facts: no
+
+  vars:
+    # These will be overridden by extra_vars from AWX/Tower
+    linux_credential_name: "Default SSH Credential"
+    windows_credential_name: "Default WinRM Credential"
+
+  pre_tasks:
+    - name: Set Linux-specific connection variables
+      set_fact:
+        ansible_connection: ssh
+        ansible_user: "{{ lookup('awx.awx.credential', linux_credential_name).username }}"
+        ansible_ssh_private_key_file: "{{ lookup('awx.awx.credential', linux_credential_name).ssh_key_data }}"
+      when: "'oslinux' in group_names"
+
+    - name: Set Windows-specific connection variables
+      set_fact:
+        ansible_connection: winrm
+        ansible_user: "{{ lookup('awx.awx.credential', windows_credential_name).username }}"
+        ansible_password: "{{ lookup('awx.awx.credential', windows_credential_name).password }}"
+        ansible_winrm_transport: ntlm
+        ansible_winrm_scheme: http
+        ansible_port: 5985
+      when: "'oswindows' in group_names"
+
+  tasks:
+    # -- Linux Tasks --
+    - name: Ping Linux host
+      ansible.builtin.ping:
+      when: "'oslinux' in group_names"
+      register: linux_ping
+
+    - name: Display Linux ping result
+      debug:
+        msg: "{{ linux_ping }}"
+      when: "'oslinux' in group_names"
+
+
+    # -- Windows Tasks --
+    - name: Ping Windows host
+      win_ping:
+      when: "'oswindows' in group_names"
+      register: win_ping
+
+    - name: Display Windows ping result
+      debug:
+        msg: "{{ win_ping }}"
+      when: "'oswindows' in group_names"
