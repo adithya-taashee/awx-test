@@ -1,35 +1,43 @@
-- name: Execute script on Linux or Windows VM
+- name: Execute version-specific PowerShell script on Windows
   hosts: all
-  gather_facts: no
+  gather_facts: yes
 
   tasks:
-    # -- Windows Tasks --
     - name: Ping Windows host
       win_ping:
-      when: "'oswindows' in group_names"
+      when: ansible_facts['os_family'] == "Windows"
 
-    - name: Display Windows version
-      win_shell: '(Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ProductName'
-      register: windows_version
-      when: "'oswindows' in group_names"
+    - name: Determine Windows version
+      set_fact:
+        win_version: "{{ ansible_facts['distribution'] }}"
+      when: ansible_facts['os_family'] == "Windows"
 
-    - name: Show Windows version
-      debug:
-        msg: "Windows Version: {{ windows_version.stdout }}"
-      when: "'oswindows' in group_names"
+    - name: Select PowerShell script based on Windows version
+      set_fact:
+        win_script: >-
+          {% if '2012' in win_version %}
+            windowspasswordexpiry2012.ps1
+          {% elif '2016' in win_version %}
+            windowspasswordexpiry2016.ps1
+          {% elif '2019' in win_version %}
+            windowspasswordexpiry2019.ps1
+          {% else %}
+            windowspasswordexpiry.ps1
+          {% endif %}
+      when: ansible_facts['os_family'] == "Windows"
 
-    - name: Copy script to the Administrator's desktop
+    - name: Copy version-specific PowerShell script
       win_copy:
-        src: windowspasswordexpiry.ps1
-        dest: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1
-      when: "'oswindows' in group_names"
+        src: "{{ win_script }}"
+        dest: "C:\\Users\\Administrator\\Desktop\\{{ win_script }}"
+      when: ansible_facts['os_family'] == "Windows"
 
     - name: Run the PowerShell script
-      win_shell: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1 -smtpUser "{{ smtp_user }}" -smtpPassword "{{ smtp_password }}"
+      win_shell: "C:\\Users\\Administrator\\Desktop\\{{ win_script }} -smtpUser '{{ smtp_user }}' -smtpPassword '{{ smtp_password }}'"
       register: script_result
-      when: "'oswindows' in group_names"
+      when: ansible_facts['os_family'] == "Windows"
 
     - name: Display script output
       debug:
         msg: "{{ script_result.stdout_lines }}"
-      when: "'oswindows' in group_names"
+      when: ansible_facts['os_family'] == "Windows"
