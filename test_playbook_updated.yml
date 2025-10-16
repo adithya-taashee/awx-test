@@ -1,0 +1,35 @@
+- name: Execute script on Linux or Windows VM
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    # -- Windows Tasks --
+    - name: Ping Windows host
+      win_ping:
+      when: "'oswindows' in group_names"
+
+    - name: Display Windows version
+      win_shell: '(Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ProductName'
+      register: windows_version
+      when: "'oswindows' in group_names"
+
+    - name: Show Windows version
+      debug:
+        msg: "Windows Version: {{ windows_version.stdout }}"
+      when: "'oswindows' in group_names"
+
+    - name: Copy script to the Administrator's desktop
+      win_copy:
+        src: windowspasswordexpiry.ps1
+        dest: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1
+      when: "'oswindows' in group_names"
+
+    - name: Run the PowerShell script
+      win_shell: C:\Users\Administrator\Desktop\windowspasswordexpiry.ps1 -smtpUser "{{ smtp_user }}" -smtpPassword "{{ smtp_password }}"
+      register: script_result
+      when: "'oswindows' in group_names"
+
+    - name: Display script output
+      debug:
+        msg: "{{ script_result.stdout_lines }}"
+      when: "'oswindows' in group_names"
