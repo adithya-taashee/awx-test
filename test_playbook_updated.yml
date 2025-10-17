@@ -28,8 +28,8 @@
 
     - name: Copy version-specific PowerShell script
       win_copy:
-        src: "{{ win_script }}"
-        dest: "C:\\Users\\Administrator\\Desktop\\{{ win_script }}"
+        src: "{{ win_script | trim}}"
+        dest: "C:\\Users\\Administrator\\Desktop\\{{ win_script | trim }}"
       when: ansible_facts['os_family'] == "Windows"
 
     - name: Run the PowerShell script
