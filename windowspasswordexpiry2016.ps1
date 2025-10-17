@@ -1,3 +1,8 @@
+param (
+    [string]$smtpUser,
+    [string]$smtpPassword
+)
+
 # Ensure TLS 1.2 is used
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -5,15 +10,18 @@
 $SmtpServer = "smtp.office365.com"
 $SmtpPort   = 587
 
-# Read SMTP credentials from environment variables
-$Username = $env:SMTP_USER
-$Password = $env:SMTP_PASSWORD
+# --- Fallbacks from environment variables ---
+if (-not $smtpUser -and $env:SMTP_USER) { $smtpUser = $env:SMTP_USER }
+if (-not $smtpPassword -and $env:SMTP_PASSWORD) { $smtpPassword = $env:SMTP_PASSWORD }
 
-if (-not $Username -or -not $Password) {
-    Write-Error "Environment variables SMTP_USER or SMTP_PASSWORD are not set."
+# --- Check for missing credentials ---
+if (-not $smtpUser -or -not $smtpPassword) {
+    Write-Error "SMTP credentials are missing. Provide -smtpUser and -smtpPassword or set SMTP_USER/SMTP_PASSWORD env vars."
     exit 1
 }
 
+$Username = $smtpUser
+$Password = $smtpPassword
 $To   = "adithya.k@taashee.com"
 $From = $Username
 
@@ -62,7 +70,7 @@ function Get-PasswordInfo {
     return @{ days_left = $daysLeftDisplay; warning = $warn }
 }
 
-# Main Logic
+# --- Main Logic ---
 $users = Get-LocalUsers
 $warnUsers = @()
 $hostname = $env:COMPUTERNAME
@@ -79,12 +87,14 @@ $ip = (Get-NetIPAddress -AddressFamily IPv4 |
 foreach ($u in $users) {
     $info = Get-PasswordInfo -user $u.Name
     if ($info.warning -eq "yes") {
-        $warnUsers += @{
-            Hostname  = $hostname
-            IP        = $ip
-            Username  = $u.Name
-            DaysLeft  = $info.days_left
-        }
+        $warnUsers += @(
+            [PSCustomObject]@{
+                Hostname  = $hostname
+                IP        = $ip
+                Username  = $u.Name
+                DaysLeft  = $info.days_left
+            }
+        )
     }
 }
 

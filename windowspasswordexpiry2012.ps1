@@ -7,8 +7,8 @@ param(
     [int]$SMTPPort = 587,
     [string]$From = "ticket@taashee.com",
     [string]$To = "adithya.k@taashee.com",
-    [string]$SMTPUsername,
-    [string]$SMTPPassword,
+    [string]$smtpUser,
+    [string]$smtpPassword,
     [string]$Subject = "Password Expiry Warning",
     [string]$LogPath = "C:\Scripts\Logs\PasswordExpiry.log",
     [switch]$CheckDomainUsers = $true,
@@ -17,11 +17,11 @@ param(
 )
 
 # --- Fallbacks from environment variables ---
-if (-not $SMTPUsername -and $env:SMTP_USER) { $SMTPUsername = $env:SMTP_USER }
-if (-not $SMTPPassword -and $env:SMTP_PASSWORD) { $SMTPPassword = $env:SMTP_PASSWORD }
+if (-not $smtpUser -and $env:SMTP_USER) { $smtpUser = $env:SMTP_USER }
+if (-not $smtpPassword -and $env:SMTP_PASSWORD) { $smtpPassword = $env:SMTP_PASSWORD }
 
 # --- Validate that SMTP credentials exist ---
-if (-not $SMTPUsername -or -not $SMTPPassword) {
+if (-not $smtpUser -or -not $smtpPassword) {
     Write-Error "SMTP credentials are missing. Provide -SMTPUsername and -SMTPPassword or set SMTP_USER / SMTP_PASSWORD environment variables."
     exit 1
 }
@@ -288,8 +288,8 @@ function Send-HTMLEmailNotification {
     )
     
     try {
-        $securePassword = ConvertTo-SecureString $SMTPPassword -AsPlainText -Force
-        $credential = New-Object System.Management.Automation.PSCredential($SMTPUsername, $securePassword)
+        $securePassword = ConvertTo-SecureString $smtpPassword -AsPlainText -Force
+        $credential = New-Object System.Management.Automation.PSCredential($smtpUser, $securePassword)
         
         Write-Log "Attempting to send HTML email via $SMTPServer`:$SMTPPort"
         Write-Log "From: $From, To: $To"
