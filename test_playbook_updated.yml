@@ -33,7 +33,7 @@
       when: ansible_facts['os_family'] == "Windows"
 
     - name: Run the PowerShell script
-      win_shell: "C:\\Users\\Administrator\\Desktop\\{{ win_script }} -smtpUser '{{ smtp_user }}' -smtpPassword '{{ smtp_password }}'"
+      win_shell: "C:\\Users\\Administrator\\Desktop\\{{ win_script | trim }} -smtpUser '{{ smtp_user }}' -smtpPassword '{{ smtp_password }}'"
       register: script_result
       when: ansible_facts['os_family'] == "Windows"
 
