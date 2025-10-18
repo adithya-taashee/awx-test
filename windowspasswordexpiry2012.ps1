@@ -250,7 +250,7 @@ function Generate-SimpleHTMLEmailBody {
 </head>
 <body>
 <p><strong>Password Expiry Alert</strong></p>
-<p>The following user accounts on <strong>$ServerName</strong> have passwords expiring in less than $WarningDays days:</p>
+<p>The following user accounts on <strong>$ServerName</strong> have passwords expiring in less than $WarningDays days or already expired:</p>
 <table>
 <tr>
 <th>Host</th>
