@@ -9,7 +9,7 @@ param (
 # SMTP Settings
 $SmtpServer = "smtp.office365.com"
 $SmtpPort   = 587
-$To         = "adithya.k@taashee.com"
+$To         = "internalapollo@taashee.com"
 
 # --- Fallbacks from environment variables ---
 if (-not $smtpUser -and $env:SMTP_USER) { $smtpUser = $env:SMTP_USER }

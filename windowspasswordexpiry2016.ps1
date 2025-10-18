@@ -22,7 +22,7 @@ if (-not $smtpUser -or -not $smtpPassword) {
 
 $Username = $smtpUser
 $Password = $smtpPassword
-$To   = "adithya.k@taashee.com"
+$To   = "internalapollo@taashee.com"
 $From = $Username
 
 $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force

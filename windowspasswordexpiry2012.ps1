@@ -6,7 +6,7 @@ param(
     [string]$SMTPServer = "smtp.office365.com",
     [int]$SMTPPort = 587,
     [string]$From = "ticket@taashee.com",
-    [string]$To = "adithya.k@taashee.com",
+    [string]$To = "internalapollo@taashee.com",
     [string]$smtpUser,
     [string]$smtpPassword,
     [string]$Subject = "Password Expiry Warning",
