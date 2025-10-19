@@ -43,40 +43,36 @@
       when: ansible_facts['os_family'] == "Windows"
 
     # Linux Tasks
-    - name: Ping Linux host
-      ping:
-      when: ansible_facts['os_family'] != "Windows"
+- name: Ping Linux host
+  ping:
+  when: ansible_facts['os_family'] != "Windows"
 
-    - name: Determine Linux distribution
-      set_fact:
-        linux_distribution: "{{ ansible_facts['distribution'] | lower }}"
-      when: ansible_facts['os_family'] != "Windows"
+- name: Determine Linux distribution
+  set_fact:
+    linux_distribution: "{{ ansible_facts['distribution'] | lower }}"
+  when: ansible_facts['os_family'] != "Windows"
 
-    - name: Select Linux script path and name
-      set_fact:
-        linux_script_src: "linuxpass.sh"
-        linux_script_name: "linuxpass.sh"
-      when: ansible_facts['os_family'] != "Windows"
+- name: Copy Linux script to target host
+  copy:
+    src: "linuxpass.sh"
+    dest: "/tmp/linuxpass.sh"
+    mode: '0755'
+  when: ansible_facts['os_family'] != "Windows"
 
-    - name: Copy Linux script to target host
-      copy:
-        src: "{{ linux_script_src | trim }}"
-        dest: "/tmp/{{ linux_script_name | trim }}"
-        mode: '0755'
-      when: ansible_facts['os_family'] != "Windows"
+- name: Run password expiry script as pp_automation_user
+  shell: "/tmp/linuxpass.sh -smtpUser '{{ smtp_user }}' -smtpPassword '{{ smtp_password }}'"
+  become: true
+  become_user: pp_automation_user
+  register: linux_script_result
+  when: ansible_facts['os_family'] != "Windows"
 
-    - name: Run the Linux script
-      shell: "/tmp/{{ linux_script_name | trim }} -smtpUser '{{ smtp_user }}' -smtpPassword '{{ smtp_password }}'"
-      register: linux_script_result
-      when: ansible_facts['os_family'] != "Windows"
+- name: Display script output
+  debug:
+    msg: "{{ linux_script_result.stdout_lines }}"
+  when: ansible_facts['os_family'] != "Windows"
 
-    - name: Display Linux script output
-      debug:
-        msg: "{{ linux_script_result.stdout_lines }}"
-      when: ansible_facts['os_family'] != "Windows"
-
-    - name: Clean up Linux script from target host
-      file:
-        path: "/tmp/{{ linux_script_name | trim }}"
-        state: absent
-      when: ansible_facts['os_family'] != "Windows"
+- name: Clean up temporary script
+  file:
+    path: "/tmp/linuxpass.sh"
+    state: absent
+  when: ansible_facts['os_family'] != "Windows"
