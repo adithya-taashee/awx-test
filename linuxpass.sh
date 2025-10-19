@@ -1,6 +1,7 @@
 #!/bin/bash
+set -euo pipefail
 
-# --- Parameters ---
+# --- Parse arguments ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -smtpUser)
@@ -12,38 +13,37 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      echo "Unknown parameter: $1"
-      echo "Usage: $0 [-smtpUser <user>] [-smtpPassword <password>]"
+      echo "Usage: $0 -smtpUser <user> -smtpPassword <password>"
       exit 1
       ;;
   esac
 done
 
-# --- Fallback to environment variables ---
-SMTP_USER="${SMTP_USER:-$SMTP_USER_ENV}"
-SMTP_PASS="${SMTP_PASS:-$SMTP_PASSWORD_ENV}"
-
-# --- Check for missing credentials ---
-if [[ -z "$SMTP_USER" || -z "$SMTP_PASS" ]]; then
-  echo "SMTP credentials are missing. Provide -smtpUser and -smtpPassword or set SMTP_USER_ENV/SMTP_PASSWORD_ENV."
+# --- Check credentials ---
+if [[ -z "${SMTP_USER:-}" || -z "${SMTP_PASS:-}" ]]; then
+  echo "SMTP credentials are required."
   exit 1
 fi
 
-# --- SMTP and mail settings ---
+# --- SMTP settings ---
 SMTP_SERVER="smtp.office365.com"
 SMTP_PORT=587
 FROM="$SMTP_USER"
 TO="ashok.t@taashee.com"
+SUBJECT="[$(hostname)] Linux User Password Expiry Report"
+LOG_FILE="/tmp/mail_send.log"
 
-# --- Warning threshold in days ---
+# --- Other settings ---
 MAX_WARN_DAYS=50
-
 HOSTNAME=$(hostname)
-IP=$(hostname -I | awk '{print $1}')
-TMP_HTML="/tmp/password_expiry_report.html"
+IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "N/A")
+
+# --- Temporary report files ---
+TMP_HTML=$(mktemp /tmp/password_expiry_report.XXXX.html)
+TMP_MAIL=$(mktemp /tmp/password_expiry_report.XXXX.eml)
 
 # --- Build HTML report ---
-cat <<EOF > "$TMP_HTML"
+cat > "$TMP_HTML" <<EOF
 <html><body>
 <h3>Password Expiry Report</h3>
 <p>The following user accounts on <strong>$HOSTNAME</strong> have their password expiry status:</p>
@@ -53,61 +53,79 @@ cat <<EOF > "$TMP_HTML"
 </tr>
 EOF
 
-# --- Loop through non-system users (UID >= 1000) ---
-for user in $(getent passwd | awk -F: '$3>=1000 {print $1}'); do
-  expiry_info=$(chage -l "$user" 2>/dev/null | grep "Password expires")
+# --- Loop through users with UID >= 1000 ---
+while IFS=: read -r user _ uid _ _ _ _; do
+  if [[ "$uid" -lt 1000 ]]; then
+    continue
+  fi
+
+  expiry_info=$(chage -l "$user" 2>/dev/null | grep "Password expires" || true)
   expiry_date=$(echo "$expiry_info" | awk -F": " '{print $2}')
 
-  if [[ "$expiry_date" == "never" || -z "$expiry_date" ]]; then
+  if [[ -z "$expiry_date" || "$expiry_date" == "never" ]]; then
     status="Never Expires"
     color="#ccffcc"
   else
-    expiry_epoch=$(date -d "$expiry_date" +%s 2>/dev/null)
-    current_epoch=$(date +%s)
-    days_left=$(( (expiry_epoch - current_epoch) / 86400 ))
-
-    if (( days_left < 0 )); then
-      status="Expired ($((-days_left)) days ago)"
-      color="#ffcccc"
-    elif (( days_left < MAX_WARN_DAYS )); then
-      status="Expires in $days_left days (Warning)"
-      color="#ffffcc"
+    expiry_epoch=$(date -d "$expiry_date" +%s 2>/dev/null || echo "")
+    if [[ -z "$expiry_epoch" ]]; then
+      status="Unknown"
+      color="#ffffff"
     else
-      status="Expires in $days_left days"
-      color="#ccffcc"
+      current_epoch=$(date +%s)
+      days_left=$(( (expiry_epoch - current_epoch) / 86400 ))
+      if (( days_left < 0 )); then
+        status="Expired ($((-days_left)) days ago)"
+        color="#ffcccc"
+      elif (( days_left < MAX_WARN_DAYS )); then
+        status="Expires in $days_left days (Warning)"
+        color="#ffffcc"
+      else
+        status="Expires in $days_left days"
+        color="#ccffcc"
+      fi
     fi
   fi
 
-  echo "<tr style='background-color:$color;'><td>$HOSTNAME</td><td>$IP</td><td>$user</td><td>$status</td></tr>" >> "$TMP_HTML"
-done
+  printf "<tr style='background-color:%s;'><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" \
+    "$color" "$HOSTNAME" "$IP" "$user" "$status" >> "$TMP_HTML"
+done < <(getent passwd)
 
 # --- Finish HTML ---
-cat <<EOF >> "$TMP_HTML"
+cat >> "$TMP_HTML" <<EOF
 </table>
 <p>Thanks and Regards,<br/>
 <b>Apollo ProProtect Admin</b></p>
 </body></html>
 EOF
 
-# --- Send email (using mail or swaks if available) ---
-SUBJECT="[$HOSTNAME] Linux User Password Expiry Report"
+# --- Build complete MIME mail message ---
+{
+  echo "From: $FROM"
+  echo "To: $TO"
+  echo "Subject: $SUBJECT"
+  echo "MIME-Version: 1.0"
+  echo "Content-Type: text/html; charset=UTF-8"
+  echo
+  cat "$TMP_HTML"
+} > "$TMP_MAIL"
 
-if command -v mail >/dev/null 2>&1; then
-  cat "$TMP_HTML" | mail -a "Content-Type: text/html" -s "$SUBJECT" "$TO"
-  echo "Report sent via mail to $TO"
-elif command -v swaks >/dev/null 2>&1; then
-  swaks --to "$TO" \
-        --from "$FROM" \
-        --server "$SMTP_SERVER" \
-        --port "$SMTP_PORT" \
-        --auth LOGIN \
-        --auth-user "$SMTP_USER" \
-        --auth-password "$SMTP_PASS" \
-        --header "Subject: $SUBJECT" \
-        --body "$(cat "$TMP_HTML")" \
-        --content-type "text/html" \
-        --tls
-  echo "Report sent via swaks to $TO"
-else
-  echo "Neither 'mail' nor 'swaks' command is available. Please install one to send emails."
-fi
+# --- Send mail using curl SMTP (STARTTLS) ---
+echo "Sending report via curl SMTP (Office365)..."
+{
+  curl --url "smtp://$SMTP_SERVER:$SMTP_PORT" \
+       --ssl-reqd \
+       --mail-from "$FROM" \
+       --mail-rcpt "$TO" \
+       --upload-file "$TMP_MAIL" \
+       --user "$SMTP_USER:$SMTP_PASS" \
+       --verbose
+} &> "$LOG_FILE" || {
+  echo "Mail send failed. Check $LOG_FILE for details."
+  exit 1
+}
+
+echo "Mail sent successfully."
+echo "Detailed log available at $LOG_FILE"
+
+# --- Cleanup temporary files ---
+rm -f "$TMP_HTML" "$TMP_MAIL"
