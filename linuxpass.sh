@@ -29,7 +29,7 @@ fi
 SMTP_SERVER="smtp.office365.com"
 SMTP_PORT=587
 FROM="$SMTP_USER"
-TO="ashok.t@taashee.com"
+TO="internalapollo@taashee.com"
 SUBJECT="[$(hostname)] Linux User Password Expiry Report"
 LOG_FILE="/tmp/mail_send.log"
 
