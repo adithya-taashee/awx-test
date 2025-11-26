@@ -48,7 +48,7 @@ cat > "$TMP_HTML" <<EOF
 <h3>Password Expiry Report</h3>
 <p>The following user accounts on <strong>$HOSTNAME</strong> have their password expiry status:</p>
 <table border='1' cellpadding='5' cellspacing='0'>
-<tr style='background-color:#e0e0e0;'>
+<tr>
 <th>Host</th><th>IP Address</th><th>Username</th><th>Status</th>
 </tr>
 EOF
@@ -64,30 +64,25 @@ while IFS=: read -r user _ uid _ _ _ _; do
 
   if [[ -z "$expiry_date" || "$expiry_date" == "never" ]]; then
     status="Never Expires"
-    color="#ccffcc"
   else
     expiry_epoch=$(date -d "$expiry_date" +%s 2>/dev/null || echo "")
     if [[ -z "$expiry_epoch" ]]; then
       status="Unknown"
-      color="#ffffff"
     else
       current_epoch=$(date +%s)
       days_left=$(( (expiry_epoch - current_epoch) / 86400 ))
       if (( days_left < 0 )); then
         status="Expired ($((-days_left)) days ago)"
-        color="#ffcccc"
       elif (( days_left < MAX_WARN_DAYS )); then
         status="Expires in $days_left days (Warning)"
-        color="#ffffcc"
       else
         status="Expires in $days_left days"
-        color="#ccffcc"
       fi
     fi
   fi
 
-  printf "<tr style='background-color:%s;'><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" \
-    "$color" "$HOSTNAME" "$IP" "$user" "$status" >> "$TMP_HTML"
+  printf "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" \
+    "$HOSTNAME" "$IP" "$user" "$status" >> "$TMP_HTML"
 done < <(getent passwd)
 
 # --- Finish HTML ---
@@ -129,3 +124,4 @@ echo "Detailed log available at $LOG_FILE"
 
 # --- Cleanup temporary files ---
 rm -f "$TMP_HTML" "$TMP_MAIL"
+
