@@ -113,8 +113,8 @@ $body = @"
     </style>
 </head>
 <body>
-    <p><strong>Password Status Report</strong></p>
-    <p>The following local user accounts are present on <strong>$hostname</strong>:</p>
+    <p><strong>Password Expiry Alert</strong></p>
+    <p>The following user accounts on <strong>$hostname</strong> have passwords expiring in less than 50 days or already expired:</p>
     <table>
         <tr>
             <th>Host</th>
