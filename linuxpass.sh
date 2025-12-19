@@ -34,7 +34,7 @@ fi
 SMTP_SERVER="smtp.office365.com"
 SMTP_PORT=587
 FROM="$SMTP_USER"
-TO="ashok.t@taashee.com"
+TO="internalapollo@taashee.com"
 SUBJECT="[$ServerName] Password Expiry Alert"
 
 # --- Host details ---
