@@ -52,8 +52,8 @@ th { background-color: #f2f2f2; }
 </style>
 </head>
 <body>
-<p><strong>Password Status Report</strong></p>
-<p>The following local user accounts are present on <strong>$HOSTNAME</strong>:</p>
+<p><strong>Password Expiry Alert</strong></p>
+<p>The following user accounts on <strong>$ServerName</strong> have passwords expiring in less than $WarningDays days or already expired:</p>
 <table>
 <tr>
 <th>Host</th>
