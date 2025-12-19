@@ -29,7 +29,7 @@ fi
 SMTP_SERVER="smtp.office365.com"
 SMTP_PORT=587
 FROM="$SMTP_USER"
-TO="internalapollo@taashee.com"
+TO="ashok.t@taashee.com"
 SUBJECT="[$(hostname)] Local User Password Status Report"
 
 # --- Host details ---
