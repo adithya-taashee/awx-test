@@ -144,6 +144,7 @@ th { background-color: #f2f2f2; }
 </head>
 <body>
 <p><strong>Password Expiry Report</strong></p>
+<p>The following user accounts on <strong>$ServerName</strong> have passwords expiring in less than $WarningDays days or already expired:</p>
 
 <table>
 <tr>
