@@ -28,51 +28,57 @@ $From = $Username
 $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
 $Cred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
 
-# Function to get local users (excluding Administrator)
+# =====================================================
+# Get ALL local users (enabled, excluding Administrator)
+# =====================================================
 function Get-LocalUsers {
     Get-LocalUser | Where-Object {
         $_.Enabled -eq $true -and $_.Name -ne "Administrator"
     }
 }
 
-# Function to get password expiry info
+# =====================================================
+# Get password expiry info (NO FILTERING)
+# =====================================================
 function Get-PasswordInfo {
     param([string]$user)
 
     try {
         $localUser = Get-LocalUser -Name $user -ErrorAction Stop
     } catch {
-        return @{ days_left = -1; warning = "unknown" }
+        return @{ days_left = "Unknown" }
     }
 
     $wmiUser = Get-WmiObject -Class Win32_UserAccount -Filter "Name='$user' AND LocalAccount='True'"
+
+    # Password never expires
     if ($wmiUser.PasswordExpires -eq $false) {
-        return @{ days_left = 9999; warning = "never" }
+        return @{ days_left = "Never" }
     }
 
-    $lastSet = $localUser.PasswordLastSet
-    if ($lastSet -eq $null) {
-        return @{ days_left = -2; warning = "unknown" }
+    # Password last set missing
+    if ($localUser.PasswordLastSet -eq $null) {
+        return @{ days_left = "Unknown" }
     }
 
+    # Local password policy (default 42 days)
     $maxAge = 42
-    $expiryDate = $lastSet.AddDays($maxAge)
+    $expiryDate = $localUser.PasswordLastSet.AddDays($maxAge)
     $daysLeft = ($expiryDate - (Get-Date)).Days
-    
-    if ($daysLeft -lt 0) {
-        $daysLeftDisplay = "Expired"
-        $warn = "yes"
-    } else {
-        $daysLeftDisplay = "$daysLeft days"
-        $warn = if ($daysLeft -lt 50) { "yes" } else { "no" }
-    }
 
-    return @{ days_left = $daysLeftDisplay; warning = $warn }
+    if ($daysLeft -lt 0) {
+        return @{ days_left = "Expired" }
+    }
+    else {
+        return @{ days_left = "$daysLeft days" }
+    }
 }
 
-# --- Main Logic ---
+# ==========================
+# Main Logic
+# ==========================
 $users = Get-LocalUsers
-$warnUsers = @()
+$reportUsers = @()
 $hostname = $env:COMPUTERNAME
 
 # Get IPv4 address (non-loopback)
@@ -86,19 +92,18 @@ $ip = (Get-NetIPAddress -AddressFamily IPv4 |
 
 foreach ($u in $users) {
     $info = Get-PasswordInfo -user $u.Name
-    if ($info.warning -eq "yes") {
-        $warnUsers += @(
-            [PSCustomObject]@{
-                Hostname  = $hostname
-                IP        = $ip
-                Username  = $u.Name
-                DaysLeft  = $info.days_left
-            }
-        )
+    $reportUsers += [PSCustomObject]@{
+        Hostname = $hostname
+        IP       = $ip
+        Username = $u.Name
+        DaysLeft = $info.days_left
     }
 }
 
-if ($warnUsers.Count -gt 0) {
+# =====================================================
+# HTML REPORT (UNCHANGED FORMAT)
+# =====================================================
+if ($reportUsers.Count -gt 0) {
     $body = @"
 <html>
 <head>
@@ -112,10 +117,15 @@ if ($warnUsers.Count -gt 0) {
     <p><strong>Password Expiry Alert</strong></p>
     <p>The following user accounts on <strong>$hostname</strong> have passwords expiring in less than 50 days or already expired:</p>
     <table>
-        <tr><th>Host</th><th>IP Address</th><th>Username</th><th>Days Until Expiry</th></tr>
+        <tr>
+            <th>Host</th>
+            <th>IP Address</th>
+            <th>Username</th>
+            <th>Days Until Expiry</th>
+        </tr>
 "@
 
-    foreach ($entry in $warnUsers) {
+    foreach ($entry in $reportUsers) {
         $body += @"
         <tr>
             <td>$($entry.Hostname)</td>
@@ -135,5 +145,7 @@ if ($warnUsers.Count -gt 0) {
 
     Send-MailMessage -SmtpServer $SmtpServer -Port $SmtpPort -UseSsl `
         -Credential $Cred -From $From -To $To `
-        -Subject "[$hostname] Password Expiry Warning" -Body $body -BodyAsHtml
+        -Subject "[$hostname] Password Expiry Warning" `
+        -Body $body -BodyAsHtml
 }
+
