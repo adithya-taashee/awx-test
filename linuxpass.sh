@@ -1,5 +1,10 @@
 #!/bin/bash
-set -eu
+set -e
+
+# ---------------- VARIABLES ----------------
+ServerName=$(hostname)
+WarningDays=50
+# -------------------------------------------
 
 # --- Parse arguments ---
 while [[ $# -gt 0 ]]; do
@@ -30,10 +35,10 @@ SMTP_SERVER="smtp.office365.com"
 SMTP_PORT=587
 FROM="$SMTP_USER"
 TO="ashok.t@taashee.com"
-SUBJECT="[$(hostname)] Local User Password Status Report"
+SUBJECT="[$ServerName] Password Expiry Alert"
 
 # --- Host details ---
-HOSTNAME=$(hostname)
+HOSTNAME="$ServerName"
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 IP=${IP:-N/A}
 
@@ -118,5 +123,6 @@ curl --url "smtp://$SMTP_SERVER:$SMTP_PORT" \
      --silent
 
 rm -f "$TMP_HTML" "$TMP_MAIL"
+
 
 
