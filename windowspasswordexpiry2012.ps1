@@ -8,7 +8,7 @@ param(
     [string]$To = "internalapollo@taashee.com",
     [string]$smtpUser,
     [string]$smtpPassword,
-    [string]$Subject = "Password Expiry Report",
+    [string]$Subject = "Password Expiry Warning",
     [string]$LogPath = "C:\Scripts\Logs\PasswordExpiry.log",
     [switch]$CheckDomainUsers = $true,
     [switch]$CheckLocalUsers = $true,
