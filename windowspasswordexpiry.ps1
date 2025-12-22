@@ -145,5 +145,5 @@ $body += @"
 # --- Send Email ---
 Send-MailMessage -SmtpServer $SmtpServer -Port $SmtpPort -UseSsl `
     -Credential $Cred -From $From -To $To `
-    -Subject "[$hostname] Local User Password Status Report" `
+    -Subject "[$hostname] Password Expiry Warning" `
     -Body $body -BodyAsHtml
