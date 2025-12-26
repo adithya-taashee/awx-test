@@ -158,11 +158,11 @@ th { background-color: #f2f2f2; }
 foreach ($u in $AllUsers) {
 
     if ($u.PasswordNeverExpires) {
-        $daysLeft = "NEVER EXPIRES"
+        $daysLeft = "Never Expires"
     }
     elseif ($u.PasswordExpires) {
         if ($u.PasswordExpires -lt (Get-Date)) {
-            $daysLeft = "EXPIRED"
+            $daysLeft = "Expired"
         } else {
             $daysLeft = (($u.PasswordExpires - (Get-Date)).Days).ToString() + " days"
         }
