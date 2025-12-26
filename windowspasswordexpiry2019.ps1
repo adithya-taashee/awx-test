@@ -53,7 +53,7 @@ function Get-PasswordInfo {
 
     # Password never expires
     if ($wmiUser.PasswordExpires -eq $false) {
-        return @{ days_left = "Never" }
+        return @{ days_left = "Never Expires" }
     }
 
     # Password last set missing
